@@ -23,22 +23,48 @@
 * IN THE SOFTWARE.
 */
 
-#ifndef SRC_ULEB128_H_
-#define SRC_ULEB128_H_
-
-#if defined(ARDUINO)
-#include <Arduino.h>
-#endif
-#include <cstddef>
+#include "uleb128/uleb128.h"
+#include <span>
 #include <cstdint>
 
 namespace bfs {
 
-std::size_t EncodeUleb128(uint64_t val, uint8_t * const data,
-                          const std::size_t len);
-std::size_t DecodeUleb128(uint8_t const * const data, const std::size_t len,
-                          uint64_t * const val);
+std::size_t EncodeUleb128(uint64_t val, std::span<uint8_t> data) {
+  std::size_t i = 0;
+  do {
+    /* Prevent buffer overflow */
+    if (i < data.size()) {
+      uint8_t b = val & 0x7F;
+      val >>= 7;
+      if (val != 0) {
+        b |= 0x80;
+      }
+      data[i++] = b;
+    } else {
+      return 0;
+    }
+  } while (val != 0);
+  return i;
+}
+
+std::size_t DecodeUleb128(std::span<const uint8_t> data, uint64_t * const val) {
+  /* Null pointer check */
+  if (!val) {return 0;}
+  uint64_t res = 0, shift = 0;
+  std::size_t i = 0;
+  while (1) {
+    /* Prevent buffer overflow */
+    if (i < data.size()) {
+      uint8_t b = data[i++];
+      res |= (b & 0x7F) << shift;
+      if (!(b & 0x80)) {break;}
+      shift += 7;
+    } else {
+      return 0;
+    }
+  }
+  *val = res;
+  return i;
+}
 
 }  // namespace bfs
-
-#endif  // SRC_ULEB128_H_

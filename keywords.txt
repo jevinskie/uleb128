@@ -1,2 +1,0 @@
-EncodeUleb128	KEYWORD2
-DecodeUleb128	KEYWORD2
